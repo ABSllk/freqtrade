@@ -78,7 +78,12 @@ class MaxDrawdown(IProtection):
                     starting_balance=actual_starting_balance,
                     relative=True,
                 )
-                drawdown = drawdown_obj.relative_account_drawdown
+                # Use peak-to-current drawdown to avoid re-locking on historical lows.
+                drawdown = getattr(
+                    drawdown_obj,
+                    "current_relative_account_drawdown",
+                    drawdown_obj.relative_account_drawdown,
+                )
             else:
                 # Legacy ratios-based calculation (default)
                 trades_df = pd.DataFrame(
@@ -88,8 +93,8 @@ class MaxDrawdown(IProtection):
                     ]
                 )
                 drawdown_obj = calculate_max_drawdown(trades_df, value_col="close_profit")
-                # In ratios mode, drawdown_abs is the cumulative ratio drop
-                drawdown = drawdown_obj.drawdown_abs
+                # In ratios mode, use current peak-to-current cumulative ratio drop.
+                drawdown = getattr(drawdown_obj, "current_drawdown_abs", drawdown_obj.drawdown_abs)
         except ValueError:
             return None
 
